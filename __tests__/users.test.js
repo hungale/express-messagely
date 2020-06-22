@@ -29,24 +29,24 @@ describe("Test User class", function () {
     expect(u.password).not.toBe(undefined);
   });
 
-//   test("can authenticate", async function () {
-//     let isValid = await User.authenticate("test", "password");
-//     expect(isValid).toBeTruthy();
+  test("can authenticate", async function () {
+    let isValid = await User.authenticate("test", "password");
+    expect(isValid).toBeTruthy();
 
-//     isValid =  await User.authenticate("test", "xxx");
-//     expect(isValid).toBeFalsy();
-//   });
+    isValid =  await User.authenticate("test", "xxx");
+    expect(isValid).toBeFalsy();
+  });
 
 
-//   test("can update login timestamp", async function () {
-//     await db.query("UPDATE users SET last_login_at=NULL WHERE username='test'");
-//     let u = await User.get("test");
-//     expect(u.last_login_at).toBe(null);
+  test("can update login timestamp", async function () {
+    await db.query("UPDATE users SET last_login_at=NULL WHERE username='test'");
+    let u = await User.get("test");
+    expect(u.last_login_at).toBe(null);
 
-//     User.updateLoginTimestamp("test");
-//     let u2 = await User.get("test");
-//     expect(u2.last_login_at).not.toBe(null);
-//   });
+    User.updateLoginTimestamp("test");
+    let u2 = await User.get("test");
+    expect(u2.last_login_at).not.toBe(null);
+  });
 
 //   test("can get", async function () {
 //     let u = await User.get("test");

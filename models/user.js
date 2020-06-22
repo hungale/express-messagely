@@ -28,7 +28,8 @@ class User {
     }
 
     // const date = Date.now();
-    const date = new Date("2011-01-01 12:00:00");
+    // const date = new Date("2011-01-01 12:00:00");
+    const currentTime = new Date(Date.now()).toUTCString();
 
     // insert the user into the database
     const response = await db.query(
@@ -36,19 +37,44 @@ class User {
         (username, password, first_name, last_name, phone, join_at)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING username, password, first_name, last_name, phone`,
-      [username, password, first_name, last_name, phone, date]
+      [username, password, first_name, last_name, phone, currentTime]
     );
-    console.log("PLEASE SHOW ME: ", response.rows);
+    // console.log("IN INSERTION:", response.rows[0]);
     return response.rows[0];
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
-  static async authenticate(username, password) { }
+  static async authenticate(username, password) { 
+    const response = await db.query(
+      `SELECT username, password
+      FROM users
+      WHERE username=$1`,
+      [username]
+    );
+
+    if(!response.rows.length) {
+      const err = new ExpressError("No such user.", 404);
+      return next(err);
+    }
+    
+    const dbPassword = response.rows[0].password;
+
+    return password === dbPassword;
+  }
 
   /** Update last_login_at for user */
 
-  static async updateLoginTimestamp(username) { }
+  static async updateLoginTimestamp(username) { 
+    const currentTime = new Date(Date.now()).toUTCString();
+    
+    await db.query(
+      `UPDATE users
+      SET last_login_at=$1
+      WHERE username=$2`,
+      [currentTime, username]
+    );
+  }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name}, ...] */
@@ -64,7 +90,16 @@ class User {
    *          join_at,
    *          last_login_at } */
 
-  static async get(username) { }
+  static async get(username) { 
+    const user = await db.query(
+      `SELECT username, first_name, last_name, phone, join_at, last_login_at
+      FROM users
+      WHERE username=$1`,
+      [username]
+    );
+
+    return user.rows[0];
+  }
 
   /** Return messages from this user.
    *
