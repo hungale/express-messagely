@@ -115,7 +115,7 @@ class User {
   static async messagesFrom(username) {
     const messages = await db.query(
       `SELECT m.id, u2.first_name, u2.last_name, u2.phone, u2.username,
-              m.body , m.sent_at, m.read_at
+              m.body, m.sent_at, m.read_at
       FROM users u1 
       JOIN messages m 
         ON u1.username = m.from_username
@@ -137,7 +137,6 @@ class User {
         phone: m.phone,
       }
     }));
-    console.log("MESSAGES!!!!!!!!", msgs);
     return msgs;
   }
 
@@ -150,7 +149,32 @@ class User {
    *   {id, first_name, last_name, phone}
    */
 
-  static async messagesTo(username) { }
+  static async messagesTo(username) { 
+    const messages = await db.query(
+      `SELECT u2.username, u2.first_name, u2.last_name, u2.phone,
+            m.id, m.body, m.sent_at, m.read_at
+      FROM users u1
+      JOIN messages m
+        ON u1.username = m.to_username
+      JOIN users u2
+        ON u2.username = m.from_username
+      WHERE u1.username  = $1`,
+      [username]
+    );
+    let msgs = messages.rows.map(m => ({
+      id: m.id,
+      body: m.body,
+      sent_at: m.sent_at,
+      read_at: m.read_at,
+      from_user: {
+        username: m.username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone,
+      }
+    }));
+    return msgs;
+  }
 }
 
 
