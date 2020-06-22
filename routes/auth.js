@@ -1,5 +1,5 @@
-const express = require('express');
-const router = new express.Router();
+// const express = require('express');
+// const router = new express.Router();
 
 /** POST /login - login: {username, password} => {token}
  *
@@ -15,8 +15,8 @@ const router = new express.Router();
  *  Make sure to update their last-login!
  */
 
-router.post("/register", (req, res, next) => {
-  console.log("please work");
-});
+// router.post("/register", (req, res, next) => {
+//   console.log("please work");
+// });
 
-module.export = router;
+// module.export = router;

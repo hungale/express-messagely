@@ -26,18 +26,20 @@ class User {
       const err = new ExpressError("User already exists.", 404);
       return next(err);
     }
+
+    // const date = Date.now();
+    const date = new Date("2011-01-01 12:00:00");
+
     // insert the user into the database
     const response = await db.query(
       `INSERT INTO users
-        username,
-        password,
-        first_name as "firstName",
-        last_name as "lastName",
-        phone
-      VALUES ($1, $2, $3, $4, $5)`,
-      [username, password, first_name, last_name, phone]
+        (username, password, first_name, last_name, phone, join_at)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING username, password, first_name, last_name, phone`,
+      [username, password, first_name, last_name, phone, date]
     );
-    
+    console.log("PLEASE SHOW ME: ", response.rows);
+    return response.rows[0];
   }
 
   /** Authenticate: is this username/password valid? Returns boolean. */
