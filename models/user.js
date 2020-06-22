@@ -11,7 +11,7 @@ class User {
    *    {username, password, first_name, last_name, phone}
    */
 
-  static async register({username, password, first_name, last_name, phone}) {
+  static async register({ username, password, first_name, last_name, phone }) {
     // check if user already exists
     const user = await db.query(
       `SELECT username
@@ -19,25 +19,25 @@ class User {
       WHERE username=$1`,
       [username]
     );
-      
-    if(user.rows.length) {
+
+    if (user.rows.length) {
       // const err = new Error("User already exists.");
       // err.status = 404;
-      const err = new ExpressError("User already exists.", 404);
-      return next(err);
+      throw new ExpressError("No such user.", 404);
     }
-
-    // const date = Date.now();
-    // const date = new Date("2011-01-01 12:00:00");
-    const currentTime = new Date(Date.now()).toUTCString();
+    /**our failed dates */
+    // // const date = Date.now();
+    // // const date = new Date("2011-01-01 12:00:00");
+    // const currentTime = new Date(Date.now()).toUTCString();
 
     // insert the user into the database
     const response = await db.query(
       `INSERT INTO users
-        (username, password, first_name, last_name, phone, join_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        (username, password, first_name, 
+        last_name, phone, join_at, last_login_at)
+        VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
         RETURNING username, password, first_name, last_name, phone`,
-      [username, password, first_name, last_name, phone, currentTime]
+      [username, password, first_name, last_name, phone]
     );
     // console.log("IN INSERTION:", response.rows[0]);
     return response.rows[0];
@@ -45,7 +45,7 @@ class User {
 
   /** Authenticate: is this username/password valid? Returns boolean. */
 
-  static async authenticate(username, password) { 
+  static async authenticate(username, password) {
     const response = await db.query(
       `SELECT username, password
       FROM users
@@ -53,11 +53,10 @@ class User {
       [username]
     );
 
-    if(!response.rows.length) {
-      const err = new ExpressError("No such user.", 404);
-      return next(err);
+    if (!response.rows.length) {
+      throw new ExpressError("No such user.", 404);
     }
-    
+
     const dbPassword = response.rows[0].password;
 
     return password === dbPassword;
@@ -65,21 +64,25 @@ class User {
 
   /** Update last_login_at for user */
 
-  static async updateLoginTimestamp(username) { 
-    const currentTime = new Date(Date.now()).toUTCString();
-    
+  static async updateLoginTimestamp(username) {
     await db.query(
       `UPDATE users
-      SET last_login_at=$1
-      WHERE username=$2`,
-      [currentTime, username]
+      SET last_login_at=current_timestamp
+      WHERE username=$1`,
+      [username]
     );
   }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name}, ...] */
 
-  static async all() { }
+  static async all() {
+    const users = await db.query(
+      `SELECT username, first_name, last_name
+      FROM users`
+    );
+    return users.rows;
+  }
 
   /** Get: get user by username
    *
@@ -90,7 +93,7 @@ class User {
    *          join_at,
    *          last_login_at } */
 
-  static async get(username) { 
+  static async get(username) {
     const user = await db.query(
       `SELECT username, first_name, last_name, phone, join_at, last_login_at
       FROM users
@@ -109,7 +112,35 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesFrom(username) { }
+  static async messagesFrom(username) {
+    const messages = await db.query(
+      `SELECT m.id, u2.first_name, u2.last_name, u2.phone, u2.username,
+              m.body , m.sent_at, m.read_at
+      FROM users u1 
+      JOIN messages m 
+        ON u1.username = m.from_username
+      JOIN users u2
+        on m.to_username = u2.username
+      WHERE u1.username = $1`,
+      [username]
+    );
+
+    let msgs = messages.rows.map(m => ({
+      id: m.id,
+      body: m.body,
+      sent_at: m.sent_at,
+      read_at: m.read_at,
+      to_user: {
+        username: m.username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone,
+      }
+    }));
+    console.log("MESSAGES!!!!!!!!", msgs);
+    return msgs;
+  }
+
 
   /** Return messages to this user.
    *
