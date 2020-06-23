@@ -1,6 +1,7 @@
 const express = require("express");
-const ExpressError = require("../expressError")
-const db = require("../db");
+const Message = require("../models/message");
+const { ensureCorrectUser, ensureLoggedIn } = require("../middleware/auth");
+const ExpressError = require("../expressError");
 
 let router = new express.Router();
 
@@ -17,6 +18,27 @@ let router = new express.Router();
  *
  **/
 
+ /** Since we don't have access to username in params, have to write an if 
+  * statement :(
+  */
+router.get("/:id", ensureLoggedIn, async (req, res, next) => {
+  try {
+
+    const username = req.user.username;
+    const msg = await Message.get(req.params.id);
+
+    if (msg.to_user.username !== username 
+        && msg.from_user.username !== username) {
+      throw new ExpressError("Cannot read this message", 401);
+    }
+
+    return res.json({ message : msg });
+
+  } catch (err) {
+    return next(err);
+  }
+})
+
 
 /** POST / - post message.
  *
@@ -24,6 +46,19 @@ let router = new express.Router();
  *   {message: {id, from_username, to_username, body, sent_at}}
  *
  **/
+
+router.post("/", async (req, res, next) => {
+  try {
+    const { username: from_username } = req.user;
+    const { to_username, body } = req.body;
+    const message = await Message.create({ from_username, to_username, body });
+
+    return res.json({ message });
+
+  } catch (err) {
+    return next(err);
+  }
+})
 
 
 /** POST/:id/read - mark message as read:
@@ -34,5 +69,17 @@ let router = new express.Router();
  *
  **/
 
+router.post("/:id/read", ensureCorrectUser, async (req, res, next) => {
 
- module.exports = router;
+  try {
+    const message = await Message.markRead(req.params.id);
+
+    return res.json({ message })
+  
+  } catch (err) {
+    return next(err);
+  }
+})
+
+
+module.exports = router;
