@@ -1,3 +1,9 @@
+const express = require("express");
+const ExpressError = require("../expressError")
+const db = require("../db");
+
+let router = new express.Router();
+
 /** GET /:id - get detail of message.
  *
  * => {message: {id,
@@ -28,3 +34,5 @@
  *
  **/
 
+
+ module.exports = router;

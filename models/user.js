@@ -2,6 +2,8 @@
 
 const db = require("../db");
 const ExpressError = require("../expressError");
+const bcrypt = require("bcrypt");
+const { BCRYPT_WORK_FACTOR } = require("../config");
 
 /** User of the site. */
 
@@ -21,14 +23,14 @@ class User {
     );
 
     if (user.rows.length) {
-      // const err = new Error("User already exists.");
-      // err.status = 404;
-      throw new ExpressError("No such user.", 404);
+      throw new ExpressError("User already exists.", 404);
     }
-    /**our failed dates */
-    // // const date = Date.now();
-    // // const date = new Date("2011-01-01 12:00:00");
+
+    /** our failed dates */
     // const currentTime = new Date(Date.now()).toUTCString();
+    // same as current_timestamp in psql
+
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
 
     // insert the user into the database
     const response = await db.query(
@@ -37,9 +39,9 @@ class User {
         last_name, phone, join_at, last_login_at)
         VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
         RETURNING username, password, first_name, last_name, phone`,
-      [username, password, first_name, last_name, phone]
+      [username, hashedPassword, first_name, last_name, phone]
     );
-    // console.log("IN INSERTION:", response.rows[0]);
+
     return response.rows[0];
   }
 
@@ -54,12 +56,12 @@ class User {
     );
 
     if (!response.rows.length) {
-      throw new ExpressError("No such user.", 404);
+      throw new ExpressError("No such user.", 400);
     }
 
     const dbPassword = response.rows[0].password;
-
-    return password === dbPassword;
+    const isMatching = await bcrypt.compare(password, dbPassword);
+    return isMatching
   }
 
   /** Update last_login_at for user */
@@ -125,7 +127,7 @@ class User {
       [username]
     );
 
-    let msgs = messages.rows.map(m => ({
+    const msgs = messages.rows.map(m => ({
       id: m.id,
       body: m.body,
       sent_at: m.sent_at,
@@ -137,6 +139,7 @@ class User {
         phone: m.phone,
       }
     }));
+
     return msgs;
   }
 
@@ -161,7 +164,7 @@ class User {
       WHERE u1.username  = $1`,
       [username]
     );
-    let msgs = messages.rows.map(m => ({
+    const msgs = messages.rows.map(m => ({
       id: m.id,
       body: m.body,
       sent_at: m.sent_at,
@@ -173,6 +176,7 @@ class User {
         phone: m.phone,
       }
     }));
+
     return msgs;
   }
 }
